@@ -6,7 +6,13 @@ import scala.collection.mutable.ListBuffer
 case class MyInt(val st:String) {
   def <(that: MyInt): Boolean = st.length < that.st.length || (st.length == that.st.length && st < that.st)
 
-  def block(blockLength: BlockLength): BigInt = {
+  def -(i:Int):MyInt = this - MyInt(i.toString)
+  def +(i:Int):MyInt = this + MyInt(i.toString)
+
+  def -(i:MyInt):MyInt = MyInt((BigInt(st) - BigInt(i.st)).toString())
+  def +(i:MyInt):MyInt = MyInt((BigInt(st) + BigInt(i.st)).toString())
+
+  def block(blockLength: BlockLength): MyInt = {
 
     val chars = st.toCharArray
     var i = chars.length - 1
@@ -23,9 +29,9 @@ case class MyInt(val st:String) {
     }
     val cut = blockLength.logLength
     if(chars.length < cut)
-      0
+      MyInt("0")
     else
-      BigInt(chars.take(chars.length - cut.toInt).mkString(""))
+      MyInt(chars.take(chars.length - cut.toInt).mkString(""))
 
 
   }
@@ -34,16 +40,18 @@ case class BlockLength(logLength:Int){
   def *(b:BlockLength):BlockLength = {
     BlockLength(logLength + b.logLength)
   }
-  def length():BigInt = {
-    BigInt(10).pow(logLength)
-  }
+//  def length():BigInt = {
+//    BigInt(10).pow(logLength)
+//  }
 }
 object MyInt {
-  def from(blockLength:BlockLength, block:BigInt):MyInt = {
-    MyInt((blockLength.length * block + 1).toString)
+  def from(blockLength:BlockLength, block:MyInt):MyInt = {
+    val st = block.st + ("0" * blockLength.logLength)
+    MyInt(st) + 1
   }
-  def to(blockLength:BlockLength, block:BigInt): MyInt ={
-    MyInt((blockLength.length * (block+1)).toString)
+  def to(blockLength:BlockLength, block:MyInt): MyInt ={
+    val st = (block + 1).st + ("0" * blockLength.logLength)
+    MyInt(st)
   }
 }
 case class Level(level:Int) {
@@ -57,7 +65,7 @@ case class Level(level:Int) {
     }
 }
 
-case class Range(level:Level, block:BigInt) {
+case class Range(level:Level, block:MyInt) {
   lazy val from:MyInt = MyInt.from(level.blockLength, block)
   lazy val to:MyInt = MyInt.to(level.blockLength, block)
 
@@ -70,9 +78,9 @@ case class Range(level:Level, block:BigInt) {
 
 object Solution {
 
-  def solveI(l: MyInt, r: MyInt, range:Range, res:ListBuffer[(Level, BigInt)]): Unit = {
+  def solveI(l: MyInt, r: MyInt, range:Range, res:ListBuffer[(Level, MyInt)]): Unit = {
     if (l == range.from && r == range.to) {
-      res.append((range.level, 1))
+      res.append((range.level, MyInt("1")))
     } else {
       val subRangeL = range.subRangeContaining(l)
       val subRangeR = range.subRangeContaining(r)
@@ -104,13 +112,13 @@ object Solution {
     }
   }
 
-  def solve(left: MyInt, right: MyInt): List[(Level, BigInt)] = {
+  def solve(left: MyInt, right: MyInt): List[(Level, MyInt)] = {
     var level = Level(0)
     while (level.blockLength.logLength < right.st.length()) {
       level = level.next
     }
-    val res = new ListBuffer[(Level, BigInt)]
-    solveI(left, right, Range(level, 0), res)
+    val res = new ListBuffer[(Level, MyInt)]
+    solveI(left, right, Range(level, MyInt("0")), res)
     res.toList
   }
 
