@@ -1,3 +1,4 @@
 project/target
 target
 workspace.xml
+scala_compiler.xml
