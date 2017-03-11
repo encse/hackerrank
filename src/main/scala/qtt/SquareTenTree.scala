@@ -166,7 +166,48 @@ case class Range(level:Level, block:MyInt) {
 
 object Solution {
 
-  def solveI(l: MyInt, r: MyInt, range: Range, res: ListBuffer[(Level, MyInt)]): Unit = {
+  def solveTeteje(l: MyInt, r: MyInt, range: Range, res: ListBuffer[(Level, MyInt)], d:Int): MyInt = {
+    if(d == 0) {
+      solveAlja(l, r, range, res)
+      r.inc()
+    }
+    else {
+      if (l == range.from && r == range.to) {
+        res.append((range.level, MyInt.One))
+        range.to.inc()
+      } else {
+        var subRangeL = range.subRangeContaining(l)
+        var subRangeR = range.subRangeContaining(r)
+
+        if (subRangeL == subRangeR) {
+          solveTeteje(l, r, subRangeL, res, d - 1)
+        } else {
+
+          if (subRangeL.from < l) {
+            solveTeteje(l, subRangeL.to, subRangeL, res, d - 1)
+          }
+          else {
+            var wholeSubrangeCount = subRangeR.block - subRangeL.block
+            if (subRangeL.from == l && subRangeR.to == r) {
+              wholeSubrangeCount = wholeSubrangeCount.inc()
+            } else if (subRangeL.from < l && r < subRangeR.to) {
+              wholeSubrangeCount = wholeSubrangeCount.dec()
+            }
+
+            res.append((subRangeR.level, wholeSubrangeCount))
+
+            if (r < subRangeR.to) {
+              solveTeteje(subRangeR.from, r, subRangeR, res, d - 1)
+            } else {
+              range.to.inc()
+            }
+          }
+        }
+      }
+    }
+  }
+
+  def solveAlja(l: MyInt, r: MyInt, range: Range, res: ListBuffer[(Level, MyInt)]): Unit = {
     if (l == range.from && r == range.to) {
       res.append((range.level,  MyInt.One))
     } else {
@@ -174,11 +215,11 @@ object Solution {
       var subRangeR = range.subRangeContaining(r)
 
       if (subRangeL == subRangeR) {
-        solveI(l, r, subRangeL, res)
+        solveAlja(l, r, subRangeL, res)
       } else {
 
         if (subRangeL.from < l) {
-          solveI(l, subRangeL.to, subRangeL, res)
+          solveAlja(l, subRangeL.to, subRangeL, res)
         }
         var wholeSubrangeCount = subRangeR.block - subRangeL.block
         if (subRangeL.from == l && subRangeR.to == r) {
@@ -190,7 +231,7 @@ object Solution {
         res.append((subRangeR.level, wholeSubrangeCount))
 
         if (r < subRangeR.to) {
-          solveI(subRangeR.from, r, subRangeR, res)
+          solveAlja(subRangeR.from, r, subRangeR, res)
         }
       }
     }
@@ -202,7 +243,11 @@ object Solution {
       level = level.next
     }
     val res = new ListBuffer[(Level, MyInt)]
-    solveI(left, right, Range(level, MyInt.Zero), res)
+    var remainder:MyInt = left
+    while(!(right < remainder)){
+      remainder = solveTeteje(remainder, right, Range(level, MyInt.Zero), res, 10)
+    }
+
     res.toList
   }
 
