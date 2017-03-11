@@ -3,32 +3,67 @@ import java.io.{File, FileInputStream}
 
 import scala.collection.mutable.ListBuffer
 
-case class MyInt(v:BigInt) {
-  def <(that: MyInt): Boolean = v < that.v
+case class MyInt(private val st:String) {
+  def <(that: MyInt): Boolean = st.length < that.st.length || (st.length == that.st.length && st < that.st)
 
-  def block(blockLength: BigInt): BigInt = {
-    (v - 1) / blockLength
+  def block(blockLength: BlockLength): BigInt = {
+
+    val chars = st.toCharArray
+    var i = chars.length - 1
+    var ok = false
+    while (!ok) {
+      if (chars(i) != '0') {
+        chars(i) = (chars(i) - 1).toChar
+        ok = true
+      }
+      else {
+        chars(i) = '9'
+      }
+      i -= 1
+    }
+    val cut = blockLength.v.toString().length() - 1
+    if(chars.length < cut)
+      0
+    else
+      BigInt(chars.take(chars.length - cut.toInt).mkString(""))
+
+
   }
 }
-
+case class BlockLength(length:BigInt){
+  def *(b:BlockLength):BlockLength = {
+    BlockLength(length * b.length)
+  }
+  def v():BigInt = {
+    length
+  }
+}
+object MyInt {
+  def from(blockLength:BlockLength, block:BigInt):MyInt = {
+    MyInt((blockLength.v * block + 1).toString)
+  }
+  def to(blockLength:BlockLength, block:BigInt): MyInt ={
+    MyInt((blockLength.v * (block+1)).toString)
+  }
+}
 case class Level(level:Int) {
   lazy val next:Level = Level(level+1)
   lazy val prev:Level = Level(level-1)
-  lazy val blockLength:BigInt =
+  lazy val blockLength:BlockLength =
     level match {
-      case 0 => 1
-      case 1 => 10
-      case _ => prev.blockLength * prev.blockLength
+      case 0 => BlockLength(1)
+      case 1 => BlockLength(10)
+      case _ =>  prev.blockLength * prev.blockLength
     }
 }
 
 case class Range(level:Level, block:BigInt) {
-  lazy val from:MyInt = MyInt(level.blockLength * block + 1)
-  lazy val to:MyInt = MyInt(level.blockLength * (block + 1))
+  lazy val from:MyInt = MyInt.from(level.blockLength, block)
+  lazy val to:MyInt = MyInt.to(level.blockLength, block)
 
   def subRangeContaining(i:MyInt):Range = {
     val subLevel = level.prev
-    val block =  i.block(subLevel.blockLength)
+    val block = i.block(subLevel.blockLength)
     Range(subLevel, block)
   }
 }
@@ -71,7 +106,7 @@ object Solution {
 
   def solve(left: MyInt, right: MyInt): List[(Level, BigInt)] = {
     var level = Level(0)
-    while (MyInt(level.blockLength) < right) {
+    while (MyInt(level.blockLength.v().toString()) < right) {
       level = level.next
     }
     val res = new ListBuffer[(Level, BigInt)]
@@ -83,8 +118,8 @@ object Solution {
     System.setIn(new FileInputStream(new File(s"src/main/scala/qtt/in.txt")))
 
     val sc = new java.util.Scanner(System.in)
-    val L = sc.nextBigInteger()
-    val Q = sc.nextBigInteger()
+    val L = sc.next
+    val Q = sc.next
     val r = solve(MyInt(L), MyInt(Q))
     println(r.length)
     for ((a, b) <- r) {
