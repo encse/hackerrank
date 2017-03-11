@@ -1,14 +1,35 @@
 package qtt
-import java.io.{File, FileInputStream}
+import java.io.{File, FileInputStream, FileOutputStream, PrintStream}
+
+
 import scala.collection.mutable.ListBuffer
 
-case class MyInt(private val digitsI:Array[Int]) {
-  val digits:Array[Int] = if(digitsI.length == 1 || digitsI(0) != 0)  digitsI else digitsI.dropWhile(d => d == 0)
+case class MyInt(var digits:Array[Int]) {
+
+  MyInt.qqq +=1
+  digits =
+    if (digits.length == 1 || digits(0) != 0)
+     digits
+    else
+     digits.dropWhile(d => d == 0)
+
   override def toString: String = digits.map(d => (d + '0').toChar).mkString("")
+
+  def shift(logLength: Int):MyInt = {
+    if (logLength == 0) {
+      this
+    } else {
+
+      val res = Array.fill[Int](digits.length + logLength)(0)
+      digits.copyToArray(res)
+      MyInt(res)
+    }
+  }
 
   def ==(that:MyInt):Boolean = {
     digits.sameElements(that.digits)
   }
+
   def <(that: MyInt): Boolean = {
     if (digits.length < that.digits.length)
       true
@@ -16,7 +37,6 @@ case class MyInt(private val digitsI:Array[Int]) {
       false
     else {
       var i = 0
-      var lt = false
       var eq = true
       while (eq && i < digits.length) {
         if (digits(i) == that.digits(i)) {
@@ -30,11 +50,12 @@ case class MyInt(private val digitsI:Array[Int]) {
   }
 
   def dec(): MyInt = {
-    this - MyInt(Array(1))
+    this - MyInt.One
   }
 
   def inc(): MyInt = {
     val res = digits.clone()
+
     var i = res.length - 1
     var d = 1
     while (d != 0 && i >= 0) {
@@ -49,7 +70,9 @@ case class MyInt(private val digitsI:Array[Int]) {
     }
 
     if (d == 1) {
-      MyInt(Array(1) ++ res)
+      val q = Array.fill[Int](res.length + 1)(0)
+      q(0) = 1
+      MyInt(q)
     }
     else {
       MyInt(res)
@@ -58,9 +81,8 @@ case class MyInt(private val digitsI:Array[Int]) {
 
   def -(other: MyInt): MyInt = {
     if (other == this) {
-      MyInt(Array(0))
+      MyInt.Zero
     } else {
-      //require(other < this)
       val res = digits.clone()
       var i = res.length - 1
       var j = other.digits.length - 1
@@ -87,8 +109,10 @@ case class MyInt(private val digitsI:Array[Int]) {
   def block(blockLength: BlockLength): MyInt = {
 
     val res = dec()
-    if (res.digits.length <= blockLength.logLength)
-      MyInt(Array(0))
+    if (blockLength.logLength == 0)
+      res
+    else if (res.digits.length <= blockLength.logLength)
+      MyInt.Zero
     else {
       MyInt(res.digits.take(res.digits.length - blockLength.logLength))
     }
@@ -100,19 +124,23 @@ case class BlockLength(logLength:Int) {}
 
 object MyInt {
 
+  var qqq = 0
+
   def fromInt(i:Int):MyInt = {
     MyInt(i.toString.map(x => x - '0').toArray)
   }
 
   def from(blockLength: BlockLength, block: MyInt): MyInt = {
-    val digits = block.digits ++ Array.fill(blockLength.logLength)(0)
-    MyInt(digits).inc()
+    block.shift(blockLength.logLength).inc()
   }
 
   def to(blockLength: BlockLength, block: MyInt): MyInt = {
-    val digits = block.inc().digits ++ Array.fill(blockLength.logLength)(0)
-    MyInt(digits)
+    block.inc().shift(blockLength.logLength)
   }
+
+  val One = MyInt(Array(1))
+  val Zero = MyInt(Array(0))
+
 }
 
 case class Level(level:Int) {
@@ -140,30 +168,26 @@ object Solution {
 
   def solveI(l: MyInt, r: MyInt, range: Range, res: ListBuffer[(Level, MyInt)]): Unit = {
     if (l == range.from && r == range.to) {
-      res.append((range.level, MyInt(Array(1))))
+      res.append((range.level,  MyInt.One))
     } else {
-      val subRangeL = range.subRangeContaining(l)
-      val subRangeR = range.subRangeContaining(r)
+      var subRangeL = range.subRangeContaining(l)
+      var subRangeR = range.subRangeContaining(r)
 
       if (subRangeL == subRangeR) {
         solveI(l, r, subRangeL, res)
       } else {
 
-        var wholeSubrangeCount = (subRangeR.block - subRangeL.block).inc()
-
-        if (subRangeL.from < l) {
-          wholeSubrangeCount = wholeSubrangeCount.dec()
-        }
-
-        if (r < subRangeR.to) {
-          wholeSubrangeCount = wholeSubrangeCount.dec()
-        }
-
         if (subRangeL.from < l) {
           solveI(l, subRangeL.to, subRangeL, res)
         }
+        var wholeSubrangeCount = subRangeR.block - subRangeL.block
+        if (subRangeL.from == l && subRangeR.to == r) {
+          wholeSubrangeCount = wholeSubrangeCount.inc()
+        } else if (subRangeL.from < l && r < subRangeR.to) {
+          wholeSubrangeCount = wholeSubrangeCount.dec()
+        }
 
-        res.append((subRangeL.level, wholeSubrangeCount))
+        res.append((subRangeR.level, wholeSubrangeCount))
 
         if (r < subRangeR.to) {
           solveI(subRangeR.from, r, subRangeR, res)
@@ -178,43 +202,29 @@ object Solution {
       level = level.next
     }
     val res = new ListBuffer[(Level, MyInt)]
-    solveI(left, right, Range(level, MyInt(Array(0))), res)
+    solveI(left, right, Range(level, MyInt.Zero), res)
     res.toList
   }
 
-  def test(): Unit ={
-
-    val lim = 1000
-    for(i <- 0 to lim) {
-      for (j <- i to lim) {
-        require((MyInt.fromInt(j) - MyInt.fromInt(i)) ==  MyInt.fromInt(j-i), s"$j - $i != ${MyInt.fromInt(j) - MyInt.fromInt(i)}")
-      }
-    }
-    for(i <- 0 to lim) {
-      if(i!=0)
-        require(MyInt.fromInt(i).dec() ==  MyInt.fromInt(i - 1), s"$i -1 != ${MyInt.fromInt(i).dec()}")
-      require(MyInt.fromInt(i).inc() ==  MyInt.fromInt(i + 1), s"$i +1 != ${MyInt.fromInt(i).inc()}")
-    }
-
-    for(i <- 0 to lim) {
-      for (j <- 0 to lim) {
-        require( (MyInt.fromInt(i) < MyInt.fromInt(j)) ==  (i < j), s"$i < $j != ${MyInt.fromInt(i) < MyInt.fromInt(j)}")
-        require( (MyInt.fromInt(i) == MyInt.fromInt(j)) ==  (i == j), s"$i == $j != ${MyInt.fromInt(i) == MyInt.fromInt(j)}")
-      }
-    }
-
-  }
   def main(args: Array[String]) {
     //test()
-    System.setIn(new FileInputStream(new File(s"src/main/scala/qtt/in1.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/qtt/in50.txt")))
+   // System.setOut(new PrintStream(new FileOutputStream(new File(s"src/main/scala/qtt/out50.out"))))
 
     val L = readLine().map(x => x - '0').toArray
     val Q = readLine().map(x => x - '0').toArray
+
+    val t0 = System.nanoTime()
     val r = solve(MyInt(L), MyInt(Q))
     println(r.length)
+
     for ((a, b) <- r) {
       println(s"${a.level} $b")
     }
+
+    val t1 = System.nanoTime()
+    //println("Elapsed time: " + (t1 - t0) / (1000000000.0)+ "s")
+
   }
 
 }
