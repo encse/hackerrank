@@ -3,7 +3,7 @@ import java.io.{File, FileInputStream}
 
 import scala.collection.mutable.ListBuffer
 
-case class MyInt(private val st:String) {
+case class MyInt(val st:String) {
   def <(that: MyInt): Boolean = st.length < that.st.length || (st.length == that.st.length && st < that.st)
 
   def block(blockLength: BlockLength): BigInt = {
@@ -21,7 +21,7 @@ case class MyInt(private val st:String) {
       }
       i -= 1
     }
-    val cut = blockLength.v.toString().length() - 1
+    val cut = blockLength.logLength
     if(chars.length < cut)
       0
     else
@@ -30,20 +30,20 @@ case class MyInt(private val st:String) {
 
   }
 }
-case class BlockLength(length:BigInt){
+case class BlockLength(logLength:Int){
   def *(b:BlockLength):BlockLength = {
-    BlockLength(length * b.length)
+    BlockLength(logLength + b.logLength)
   }
-  def v():BigInt = {
-    length
+  def length():BigInt = {
+    BigInt(10).pow(logLength)
   }
 }
 object MyInt {
   def from(blockLength:BlockLength, block:BigInt):MyInt = {
-    MyInt((blockLength.v * block + 1).toString)
+    MyInt((blockLength.length * block + 1).toString)
   }
   def to(blockLength:BlockLength, block:BigInt): MyInt ={
-    MyInt((blockLength.v * (block+1)).toString)
+    MyInt((blockLength.length * (block+1)).toString)
   }
 }
 case class Level(level:Int) {
@@ -51,8 +51,8 @@ case class Level(level:Int) {
   lazy val prev:Level = Level(level-1)
   lazy val blockLength:BlockLength =
     level match {
-      case 0 => BlockLength(1)
-      case 1 => BlockLength(10)
+      case 0 => BlockLength(0)
+      case 1 => BlockLength(1)
       case _ =>  prev.blockLength * prev.blockLength
     }
 }
@@ -106,7 +106,7 @@ object Solution {
 
   def solve(left: MyInt, right: MyInt): List[(Level, BigInt)] = {
     var level = Level(0)
-    while (MyInt(level.blockLength.v().toString()) < right) {
+    while (level.blockLength.logLength < right.st.length()) {
       level = level.next
     }
     val res = new ListBuffer[(Level, BigInt)]
