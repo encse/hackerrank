@@ -12,11 +12,17 @@ case class Node(inode:Int, c:Int, edges:ListBuffer[Edge] = new ListBuffer){
   def degree = edges.length
 }
 
-case class Edge(inodeA:Int, inodeB:Int, var cut:(Int, Int) = null){
+case class Edge(iedge:Int, inodeA:Int, inodeB:Int, var cut:(Int, Int) = null){
 }
 
 case class SplitMap(nodes: IndexedSeq[Node]) {
 
+  var qMap = mutable.Map[Int, mutable.Set[Int]]()
+  def lookup(cutA: Int):Iterable[Int] = {
+
+    qMap.getOrElse(cutA, Nil)
+
+  }
 
   private val sumC = nodes.map(node => node.c).sum
 
@@ -28,6 +34,8 @@ case class SplitMap(nodes: IndexedSeq[Node]) {
     val (cutA, cutB) = edge.cut
     if (edge.inodeA == node.inode) cutB else cutA
   }
+
+  val allEdges = (for(node <- nodes; edge <- node.edges) yield edge).toSet
 
   var e = 0
   while(e < nodes.length - 1){
@@ -48,6 +56,23 @@ case class SplitMap(nodes: IndexedSeq[Node]) {
     }
   }
 
+  for(edge <- allEdges){
+      val (cutA, cutB) = edge.cut
+      val d = Math.abs(cutA - cutB)
+
+      if (!qMap.contains(cutA))
+        qMap(cutA) = mutable.Set[Int]()
+
+      if (!qMap.contains(cutB))
+        qMap(cutB) = mutable.Set[Int]()
+
+      if (!qMap.contains(d))
+        qMap(d) = mutable.Set[Int]()
+
+      qMap(cutA).add(edge.iedge)
+      qMap(cutB).add(edge.iedge)
+      qMap(d).add(edge.iedge)
+  }
 }
 
 object Solution {
@@ -78,7 +103,7 @@ object Solution {
   }
 
   def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/balancedforest/in1.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/balancedforest/in4.txt")))
 
     val sc = new java.util.Scanner(System.in)
     val q = sc.nextInt()
@@ -86,7 +111,7 @@ object Solution {
       val n = sc.nextInt()
       sc.nextLine()
       val nodes: IndexedSeq[Node] = for ((st, idx) <- sc.nextLine().split(" ").zipWithIndex) yield Node(idx, st.toInt)
-      val edges: IndexedSeq[Edge] = for (iedge <- 1 until n) yield Edge(sc.nextInt() - 1, sc.nextInt() - 1)
+      val edges: IndexedSeq[Edge] = for (iedge <- 1 until n) yield Edge(iedge - 1, sc.nextInt() - 1, sc.nextInt() - 1)
 
       for (edge <- edges) {
         nodes(edge.inodeA).addEdge(edge)
@@ -94,7 +119,6 @@ object Solution {
       }
 
       val s = SplitMap(nodes)
-      //println(edges)
       var i = 0
       var min = Int.MaxValue
       while (i < edges.length) {
@@ -103,11 +127,13 @@ object Solution {
         val cutA = Math.min(edge12.cut._1, edge12.cut._2)
         val cutB = Math.max(edge12.cut._1, edge12.cut._2)
         val (inode1, inode2) = if (edge12.cut._1 < edge12.cut._2) (edge12.inodeA, edge12.inodeB) else (edge12.inodeB, edge12.inodeA)
+        if (cutA == cutB) {
+          min = Math.min(min, cutA)
+        }
 
-        while (j < edges.length) {
-          if(i == j && cutA == cutB){
-            min = Math.min(min, cutA)
-          } else if (i != j) {
+        for (j <- s.lookup(cutA)) {
+
+          if (i != j) {
             val edge34 = edges(j)
 
             val k1 = cutA
@@ -117,21 +143,19 @@ object Solution {
             if (reachable(nodes, inode1, inode2, edge34.inodeA, edge34.inodeB)) {
               k2 = edge34.cut._1 - cutA
               k3 = edge34.cut._2
-            }
-            else if(reachable(nodes, inode1, inode2, edge34.inodeB, edge34.inodeA)) {
+            } else if (reachable(nodes, inode1, inode2, edge34.inodeB, edge34.inodeA)) {
               k2 = edge34.cut._1
               k3 = edge34.cut._2 - cutA
             }
 
             if (k2 != -1 && k3 != -1) {
               val ks = Array(k1, k2, k3).sorted
-              if(ks(1) == ks(2)){
+              if (ks(1) == ks(2)) {
                 min = Math.min(min, ks(1) - ks(0))
               }
             }
 
           }
-          j += 1
         }
         i += 1
       }
