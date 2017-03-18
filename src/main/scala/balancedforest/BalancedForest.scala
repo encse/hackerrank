@@ -5,20 +5,31 @@ import java.io.{File, FileInputStream, FileOutputStream, PrintStream}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-case class Node(inode:Int, c:Int, edges:ListBuffer[Edge] = new ListBuffer){
+case class Node(inode:Int, c:Long, edges:ListBuffer[Edge] = new ListBuffer, var edgeOut:Edge = null){
   def addEdge(edge: Edge) = {
     edges.append(edge)
   }
   def degree = edges.length
 }
 
-case class Edge(iedge:Int, inodeA:Int, inodeB:Int, var cut:(Int, Int) = null){
+case class Edge(iedge:Int, inodeA:Int, inodeB:Int, var cutA:Long = -1, var cutB:Long = -1, var inodeOut:Int = -1) {
+  def reverse(): Edge = Edge(iedge, inodeB, inodeA, cutB, cutA, inodeOut)
+
+  override def equals(o: Any): Boolean = o match {
+    case that: Edge => that.iedge == iedge
+    case _ => false
+  }
+
+  override def hashCode: Int = iedge.hashCode
+
+  def hasCut = cutA >= 0
+
 }
 
 case class SplitMap(nodes: IndexedSeq[Node]) {
 
-  var qMap = mutable.Map[Int, mutable.Set[Int]]()
-  def lookup(cutA: Int):Iterable[Int] = {
+  var qMap = mutable.Map[Long, mutable.Set[Int]]()
+  def lookup(cutA: Long):Iterable[Int] = {
 
     qMap.getOrElse(cutA, Nil)
 
@@ -31,33 +42,36 @@ case class SplitMap(nodes: IndexedSeq[Node]) {
   }
 
   private def otherCut(node: Node, edge: Edge) = {
-    val (cutA, cutB) = edge.cut
-    if (edge.inodeA == node.inode) cutB else cutA
+    if (edge.inodeA == node.inode) edge.cutB else edge.cutA
   }
 
   val allEdges = (for(node <- nodes; edge <- node.edges) yield edge).toSet
 
   var e = 0
   while(e < nodes.length - 1){
-    for (node <- nodes if node.edges.count(edge => edge.cut == null) == 1) {
+    for (node <- nodes if node.edges.count(edge => !edge.hasCut) == 1) {
       var w = node.c
       for {
-        edge <- node.edges if edge.cut != null
+        edge <- node.edges if edge.hasCut
       } w += otherCut(node, edge)
 
-      for (edge <- node.edges if edge.cut == null) {
+      for (edge <- node.edges if !edge.hasCut) {
+        node.edgeOut = edge
+        edge.inodeOut = if(edge.inodeA == node.inode) edge.inodeB else edge.inodeA
         e+=1
         if (edge.inodeA == node.inode) {
-          edge.cut = (w, sumC - w)
+          edge.cutA = w
+          edge.cutB = sumC - w
         } else {
-          edge.cut = (sumC - w, w)
+          edge.cutA = sumC - w
+          edge.cutB = w
         }
       }
     }
   }
 
   for(edge <- allEdges){
-      val (cutA, cutB) = edge.cut
+      val (cutA, cutB) = (edge.cutA, edge.cutB)
       val d = Math.abs(cutA - cutB)
 
       if (!qMap.contains(cutA))
@@ -80,27 +94,48 @@ object Solution {
     if (edge.inodeA == node.inode) nodes(edge.inodeB) else nodes(edge.inodeA)
   }
 
-  def reachable(nodes: IndexedSeq[Node], inode1: Int, inode2: Int, inode3: Int, inode4: Int): Boolean = {
-    val seen = mutable.Set[Int](inode1, inode4)
-    val q = new mutable.Queue[Int]
-    q.enqueue(inode2)
-    var ok = false
-    while (q.nonEmpty && !ok) {
-      val inode = q.dequeue()
-      if (!seen(inode)) {
-        seen.add(inode)
-        if (inode == inode3) {
-          ok = true
-        } else {
-          for (edge <- nodes(inode).edges) {
-            q.enqueue(otherNode(nodes, nodes(inode), edge).inode)
-          }
-        }
-      }
+  def orient(nodes: IndexedSeq[Node], edge1: Edge, edge2:Edge): (Edge, Edge) = {
+    def next(edge: Edge): (Edge, Edge) = {
+      val inodeNext = edge.inodeOut
+      val nodeNext = nodes(inodeNext)
+      val edgeNext = nodeNext.edgeOut
+
+        if (edgeNext == null) {
+          (edge, edge)
+        } else if (edgeNext.inodeA == edge.inodeB){
+          (edge, edgeNext)
+        } else if (edgeNext.inodeB == edge.inodeB){
+          (edge, edgeNext.reverse())
+        } else if (edgeNext.inodeA == edge.inodeA){
+          (edge.reverse(), edgeNext)
+        } else if (edgeNext.inodeB == edge.inodeA) {
+          (edge.reverse(), edgeNext.reverse())
+        } else
+          ???
     }
 
-    ok
+    if (edge1 == edge2) {
+      (edge1, edge2.reverse())
+    } else if(edge1.inodeA == edge2.inodeA) {
+      (edge1.reverse(), edge2)
+    } else if(edge1.inodeA == edge2.inodeB) {
+      (edge1.reverse(), edge2.reverse())
+    } else if(edge1.inodeB == edge2.inodeA) {
+      (edge1, edge2)
+    } else if(edge1.inodeB == edge2.inodeB) {
+      (edge1, edge2.reverse())
+    } else {
+      val (edge1M, edgeNext1) = next(edge1)
+      val (edge2M, edgeNext2) = next(edge2)
+
+      val (oriented1, oriented2) = orient(nodes, edgeNext1, edgeNext2)
+      val res1 = if (oriented1.inodeA == edgeNext1.inodeA) edge1M else edge1M.reverse()
+      val res2 = if (oriented2.inodeA == edgeNext2.inodeA) edge2M else edge2M.reverse()
+      (res1, res2)
+    }
+
   }
+
 
   def main(args: Array[String]) {
     System.setIn(new FileInputStream(new File(s"src/main/scala/balancedforest/in4.txt")))
@@ -120,13 +155,14 @@ object Solution {
 
       val s = SplitMap(nodes)
       var i = 0
-      var min = Int.MaxValue
+      var min = Long.MaxValue
+
       while (i < edges.length) {
         var j = 0
         val edge12 = edges(i)
-        val cutA = Math.min(edge12.cut._1, edge12.cut._2)
-        val cutB = Math.max(edge12.cut._1, edge12.cut._2)
-        val (inode1, inode2) = if (edge12.cut._1 < edge12.cut._2) (edge12.inodeA, edge12.inodeB) else (edge12.inodeB, edge12.inodeA)
+        val cutA = Math.min(edge12.cutA, edge12.cutB)
+        val cutB = Math.max(edge12.cutA, edge12.cutB)
+        val (inode1, inode2) = if (edge12.cutA < edge12.cutB) (edge12.inodeA, edge12.inodeB) else (edge12.inodeB, edge12.inodeA)
         if (cutA == cutB) {
           min = Math.min(min, cutA)
         }
@@ -136,16 +172,18 @@ object Solution {
           if (i != j) {
             val edge34 = edges(j)
 
-            val k1 = cutA
-            var k2 = -1
-            var k3 = -1
+            var k1 = cutA
+            var k2 = -1L
+            var k3 = -1L
 
-            if (reachable(nodes, inode1, inode2, edge34.inodeA, edge34.inodeB)) {
-              k2 = edge34.cut._1 - cutA
-              k3 = edge34.cut._2
-            } else if (reachable(nodes, inode1, inode2, edge34.inodeB, edge34.inodeA)) {
-              k2 = edge34.cut._1
-              k3 = edge34.cut._2 - cutA
+            val (orientedEdge12, orientedEdge34) = orient(nodes, edge12, edge34)
+            if (edge34.inodeA == orientedEdge34.inodeA) {
+              k2 = edge34.cutA - k1
+              k3 = edge34.cutB
+            }
+            else {
+              k2 = edge34.cutA
+              k3 = edge34.cutB - k1
             }
 
             if (k2 != -1 && k3 != -1) {
@@ -159,7 +197,7 @@ object Solution {
         }
         i += 1
       }
-      if (min == Int.MaxValue)
+      if (min == Long.MaxValue)
         println(-1)
       else
         println(min)
@@ -167,3 +205,4 @@ object Solution {
   }
 
 }
+
