@@ -33,8 +33,9 @@ case class Node(inode:Int, edges:ListBuffer[Edge] = new ListBuffer, var inodePar
   }
 }
 
-case class Edge(iedge:Int, inodeA:Int, inodeB:Int, var inodeOut:Int = -1) {
-  def reverse(): Edge = Edge(iedge, inodeB, inodeA, inodeOut)
+class Edge(val iedge:Int, val inodeA:Int, val inodeB:Int) {
+  var inodeOut:Int = -1
+  var seen:Boolean = false
 
   override def equals(o: Any): Boolean = o match {
     case that: Edge => that.iedge == iedge
@@ -52,21 +53,22 @@ object Solution {
 
   def buildParentGraph(nodes: IndexedSeq[Node]): Unit ={
 
-    var restINodes = nodes.map(node => node.inode).toSet
-    var edgesSeen = Set[Edge]()
+    var restINodes:Iterable[Node] = nodes
 
     while (restINodes.nonEmpty) {
-      var restINodesNew: Set[Int] = restINodes
-      for (inode <- restINodesNew; node = nodes(inode)) {
-        val edgesNotSeen = node.edges.filter(edge => !edgesSeen.contains(edge))
+      var restINodesNew = mutable.Set[Node]()
+      for (node <- restINodes) {
+        val edgesNotSeen = node.edges.filter(edge => !edge.seen)
 
         if(edgesNotSeen.length == 1){
           val edge = edgesNotSeen.head
           node.inodeParent = otherNode(nodes, node, edge).inode
-          edgesSeen += edge
-          restINodesNew -= node.inode
+          edge.seen = true
         } else if(edgesNotSeen.isEmpty) {
-          restINodesNew -= node.inode
+
+        }
+        else {
+          restINodesNew += node
         }
 
       }
@@ -78,20 +80,20 @@ object Solution {
     var e = 0
     var res = 0L
     var ksSorted = ks.toList.sortBy(k => -nodes(k).getDistanceFromRoot(nodes))
-    var restINodes = Set[Int]()
+    var restINodes = mutable.Set[Int]()
 
     var cache = mutable.Map[Int, Data]()
 
-    while (ksSorted.nonEmpty || restINodes.nonEmpty) {
-      var ksCurrent = Set[Int]()
+    while (ksSorted.length + restINodes.size >= 1) {
+      var ksCurrent = mutable.Set[Int]()
       if (ksSorted.nonEmpty && (restINodes.isEmpty || nodes(ksSorted.head).getDistanceFromRoot(nodes) == nodes(restINodes.head).getDistanceFromRoot(nodes))) {
         val d = nodes(ksSorted.head).getDistanceFromRoot(nodes)
         val (ksCurrentT, ksSortedT) = ksSorted.span(k => nodes(k).getDistanceFromRoot(nodes) == d)
-        ksCurrent = ksCurrentT.toSet
+        ksCurrent = mutable.Set[Int](ksCurrentT: _*)
         ksSorted = ksSortedT
       }
 
-      var restINodesNew = Set[Int]()
+      var restINodesNew = mutable.Set[Int]()
       for (inode <- ksCurrent.union(restINodes)) {
         if (!cache.contains(inode)) {
           cache(inode) = new Data(if (ks.contains(inode)) inode else 0, 0, 0)
@@ -138,7 +140,9 @@ object Solution {
         data.uWithDist %= 1000000007
         data.res %= 1000000007
 
-        res = data.res
+       // if(ksCurrent.contains(inode)) {
+          res = data.res
+        //}
 
       }
 
@@ -150,20 +154,21 @@ object Solution {
 
 
   def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in4.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in20.txt")))
 
     val sc = new java.util.Scanner(System.in)
     val (n,q) = (sc.nextInt(), sc.nextInt())
     val nodes: IndexedSeq[Node] = (0 to n).map(i => Node(i))
-    val edges: IndexedSeq[Edge] = (1 to n-1).map(iedge => Edge(iedge, sc.nextInt(), sc.nextInt()))
+    val edges: IndexedSeq[Edge] = (1 to n-1).map(iedge => new Edge(iedge, sc.nextInt(), sc.nextInt()))
 
     for(edge <- edges){
       nodes(edge.inodeA).edges.append(edge)
       nodes(edge.inodeB).edges.append(edge)
     }
 
-    buildParentGraph(nodes)
     val t1 = System.currentTimeMillis()
+    buildParentGraph(nodes)
+    println((System.currentTimeMillis()-t1)/1000.0)
     for (i <- 1 to q) {
       val c = sc.nextInt()
       sc.nextLine()
@@ -173,7 +178,7 @@ object Solution {
     }
 
     val t2 = System.currentTimeMillis()
-    //println((t2-t1)/1000.0)
+    println((System.currentTimeMillis()-t1)/1000.0)
   }
 
 }
