@@ -1,4 +1,4 @@
-//package kittyscalc
+package kittyscalc
 
 import java.io.{File, FileInputStream, FileOutputStream, PrintStream}
 
@@ -58,110 +58,77 @@ object Solution {
 
   def buildParentGraph(nodes: IndexedSeq[Node]): Unit = {
 
-    var restINodes: Iterable[Node] = nodes
+    val nodesCurrent = mutable.Queue(nodes.filter(node => node.notSeenEdges.size == 1): _*)
 
-    var restINodesNew = mutable.Set[Node]()
-    while (restINodes.nonEmpty) {
-      for (node <- restINodes) {
-        if (node.notSeenEdges.size == 1) {
-          val edge = node.notSeenEdges.head
-          node.nodeParent = edge.otherNode(node)
-          node.seenEdge(nodes, edge)
-          restINodesNew += node.nodeParent
-          restINodesNew -= node
-        } else if (node.notSeenEdges.isEmpty) {
-          restINodesNew -= node
-        }
-
+    while (nodesCurrent.nonEmpty) {
+      val node = nodesCurrent.dequeue()
+      if (node.notSeenEdges.size == 1) {
+        val edge = node.notSeenEdges.head
+        node.nodeParent = edge.otherNode(node)
+        node.seenEdge(nodes, edge)
+        if (node.nodeParent.notSeenEdges.size == 1)
+          nodesCurrent.enqueue(node.nodeParent)
+      } else {
+        //require(node.notSeenEdges.size == 0)
       }
-      restINodes = restINodesNew
     }
   }
 
-  def cacheGet(node:Node, query:Int): Data ={
+
+  def dataGet(node: Node, query: Int): Data = {
     if (node.data == null || node.data.version != query) null else node.data
   }
 
-  def solve(ks:Set[Node], query:Int):Long = {
-    var e = 0
+  def solve(ksList: Seq[Node], query: Int): Long = {
     var res = 0L
-    var ksSorted = ks.toList.sortBy(node => -node.getDistanceFromRoot())
-    var restNodes = mutable.Set[Node]()
+    val ks = ksList.toSet
+    val ksSorted = mutable.PriorityQueue(ksList: _*)(Ordering.by(node => node.getDistanceFromRoot()))
 
-    def qqq(restNodesNew: mutable.Set[Node], set:Iterable[Node]) = {
-      set.foreach{ node =>
-        if (node.data == null || node.data.version != query) {
-          node.data = new Data(if (ks.contains(node)) node.inode else 0, 0, 0, query)
+    while (ksSorted.size > 1) {
+      val node = ksSorted.dequeue()
+      if (dataGet(node, query) == null) {
+        node.data = new Data(if (ks.contains(node)) node.inode else 0, 0, 0, query)
 
-          val data = node.data
-          val v = data.u
+        val data = node.data
+        val v = data.u
 
-          var i = 0
-          while(i<node.edges.length){
-            val edge = node.edges(i)
-            val o = edge.otherNode(node)
-            val dataO = cacheGet(o, query)
-            if (dataO != null) {
-              data.u += dataO.u
-              data.uWithDist += dataO.uWithDist + dataO.u
-              data.res += 1 * v * dataO.u + dataO.uWithDist * v + dataO.res
-            }
-            i+=1
-          }
+        var i = 0
+        while (i < node.edges.length) {
+          val edgeI = node.edges(i)
+          val oI = edgeI.otherNode(node)
+          val dataI = dataGet(oI, query)
+          if (dataI != null) {
+            data.u += dataI.u
+            data.uWithDist += dataI.uWithDist + dataI.u
+            data.res += 1 * v * dataI.u + dataI.uWithDist * v + dataI.res
 
-          i = 0
-          while(i<node.edges.length) {
-            val edgeI = node.edges(i)
-            var j = i+1
-            val oI = edgeI.otherNode(node)
-            val dataI = cacheGet(oI, query)
-            if(dataI != null) {
-              while (j < node.edges.length) {
-                val edgeJ = node.edges(j)
+            var j = i + 1
+            while (j < node.edges.length) {
+              val edgeJ = node.edges(j)
+              val oJ = edgeJ.otherNode(node)
+              val dataJ = dataGet(oJ, query)
 
-                val oJ = edgeJ.otherNode(node)
-
-                val dataJ = cacheGet(oJ, query)
-
-                if (dataJ != null) {
-                  data.res += 2 * dataJ.u * dataI.u + dataI.uWithDist * dataJ.u + dataJ.uWithDist * dataI.u
-                }
-
-                j += 1
+              if (dataJ != null) {
+                data.res += 2 * dataJ.u * dataI.u + dataI.uWithDist * dataJ.u + dataJ.uWithDist * dataI.u
               }
+
+              j += 1
             }
-            i +=1
+
           }
-
-
-          if (node.nodeParent != null) {
-            restNodesNew += node.nodeParent
-          }
-
-          data.u %= 1000000007
-          data.uWithDist %= 1000000007
-          data.res %= 1000000007
-
-          res = data.res
+          i += 1
         }
+
+        if (node.nodeParent != null) {
+          ksSorted.enqueue(node.nodeParent)
+        }
+
+        data.u %= 1000000007
+        data.uWithDist %= 1000000007
+        data.res %= 1000000007
+
+        res = data.res
       }
-    }
-
-    while (ksSorted.nonEmpty || restNodes.nonEmpty) {
-
-      var ksCurrent: Iterable[Node] = Nil
-      if (ksSorted.nonEmpty && (restNodes.isEmpty || ksSorted.head.getDistanceFromRoot() == restNodes.head.getDistanceFromRoot())) {
-        val d = ksSorted.head.getDistanceFromRoot()
-        val (ksCurrentT, ksSortedT) = ksSorted.span(node => node.getDistanceFromRoot() == d)
-        ksCurrent = ksCurrentT
-        ksSorted = ksSortedT
-      }
-
-      val restNodesNew = mutable.Set[Node]()
-      qqq(restNodesNew, ksCurrent)
-      qqq(restNodesNew, restNodes)
-
-      restNodes = restNodesNew
     }
 
     res
@@ -169,34 +136,34 @@ object Solution {
 
 
   def main(args: Array[String]) {
-    //System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in10.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in20.txt")))
+    val t1 = System.currentTimeMillis()
 
     val sc = new java.util.Scanner(System.in)
-    val (n,q) = (sc.nextInt(), sc.nextInt())
+    val (n, q) = (sc.nextInt(), sc.nextInt())
     val nodes: IndexedSeq[Node] = (0 to n).map(i => new Node(i))
-    var iedge =1
-    while(iedge <= n-1){
+    var iedge = 1
+    while (iedge <= n - 1) {
       val edge = new Edge(iedge, nodes(sc.nextInt()), nodes(sc.nextInt()))
       edge.nodeA.addEdge(edge)
       edge.nodeB.addEdge(edge)
-      iedge+=1
+      iedge += 1
     }
 
-    // val t1 = System.currentTimeMillis()
+    println((System.currentTimeMillis() - t1) / 1000.0)
     buildParentGraph(nodes)
-    //println((System.currentTimeMillis()-t1)/1000.0)
-    var i =1
-    while(i<=q) {
+    println((System.currentTimeMillis() - t1) / 1000.0)
+    var i = 1
+    while (i <= q) {
       val c = sc.nextInt()
       sc.nextLine()
-      val k = sc.nextLine().split(" ").map(st => st.toInt).toSet
+      val k = sc.nextLine().split(" ").map(st => nodes(st.toInt))
 
-      println(solve(k.map(k => nodes(k)), i))
-      i+=1
+      println(solve(k, i))
+      i += 1
     }
 
-    //val t2 = System.currentTimeMillis()
-    //println((System.currentTimeMillis()-t1)/1000.0)
+    println((System.currentTimeMillis() - t1) / 1000.0)
   }
 
 }
