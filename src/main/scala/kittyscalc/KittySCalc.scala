@@ -91,10 +91,22 @@ object Solution {
     val mod = 1000000007
     var res = 0L
     val ks = ksList.toSet
-    val ksSorted = mutable.PriorityQueue(ksList: _*)(Ordering.by(node => node.getDistanceFromRoot()))
+    val ks1 = mutable.Queue[Node](ksList.sortBy(node => -node.getDistanceFromRoot()): _*)
+    val ks2 = mutable.Queue[Node]()
+    while (ks1.size + ks2.size > 1) {
+      val q =
+        if (ks1.nonEmpty && ks2.nonEmpty){
+          if (ks1.head.getDistanceFromRoot() > ks2.head.getDistanceFromRoot())
+            ks1
+          else
+            ks2
+        } else if(ks1.nonEmpty) {
+          ks1
+        } else {
+          ks2
+        }
 
-    while (ksSorted.size > 1) {
-      val node = ksSorted.dequeue()
+      val node = q.dequeue()
 
       if (dataGet(node, query) == null) {
         val data = new Data(if (ks.contains(node)) node.inode else 0, 0, 0, query)
@@ -142,7 +154,7 @@ object Solution {
         data.res = (data.res + v * (uSum + uWithDistSum) + resSum + (neighbours >>> 1)) % mod
 
         if (node.nodeParent != null && dataGet(node.nodeParent, query) == null) {
-          ksSorted.enqueue(node.nodeParent)
+          ks2.enqueue(node.nodeParent)
         }
 
         res = data.res
