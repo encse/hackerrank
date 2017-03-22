@@ -89,13 +89,13 @@ object Solution {
 
   def solve(ksList: Seq[Node], query: Int): Long = {
     val mod = 1000000007
-    val b = Long.MaxValue / mod * mod
     var res = 0L
     val ks = ksList.toSet
     val ksSorted = mutable.PriorityQueue(ksList: _*)(Ordering.by(node => node.getDistanceFromRoot()))
 
     while (ksSorted.size > 1) {
       val node = ksSorted.dequeue()
+
       if (dataGet(node, query) == null) {
         val data = new Data(if (ks.contains(node)) node.inode else 0, 0, 0, query)
         val v = data.u
@@ -104,6 +104,7 @@ object Solution {
 
         var uSum = 0L
         var uWithDistSum = 0L
+        var resSum = 0L
         var j = 0
         while (j < node.edges.length) {
           val edgeJ = node.edges(j)
@@ -113,10 +114,12 @@ object Solution {
           if (dataJ != null) {
             uSum += dataJ.u
             uWithDistSum += dataJ.uWithDist
+            resSum += dataJ.res
           }
-          j+=1
+          j += 1
         }
-        var i=0
+
+        var i = 0
         var neighbours = 0L
         while (i < node.edges.length) {
           val edgeI = node.edges(i)
@@ -124,24 +127,23 @@ object Solution {
           val dataI = dataGet(oI, query)
 
           if (dataI != null) {
-            data.u = (data.u + dataI.u) % mod
-            data.uWithDist = (data.uWithDist + dataI.uWithDist + dataI.u) % mod
-            data.res = (data.res + 1 * v * dataI.u + dataI.uWithDist * v + dataI.res) % mod
 
             neighbours +=
               2 * dataI.u * (uSum - dataI.u) +
-              dataI.uWithDist * (uSum - dataI.u) +
-              dataI.u * (uWithDistSum - dataI.uWithDist)
+                dataI.uWithDist * (uSum - dataI.u) +
+                dataI.u * (uWithDistSum - dataI.uWithDist)
           }
 
           i += 1
         }
 
-        data.res = (data.res + (neighbours >>> 1)) % mod
-        if (node.nodeParent != null) {
+        data.u = (data.u + uSum) % mod
+        data.uWithDist = (data.uWithDist + uSum + uWithDistSum) % mod
+        data.res = (data.res + v * (uSum + uWithDistSum) + resSum + (neighbours >>> 1)) % mod
+
+        if (node.nodeParent != null && dataGet(node.nodeParent, query) == null) {
           ksSorted.enqueue(node.nodeParent)
         }
-
 
         res = data.res
       }
@@ -152,17 +154,17 @@ object Solution {
 
 
   def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in10.txt")))
     val t1 = System.currentTimeMillis()
 
     val st = readLine().split(" ").map(stI => stI.toInt)
     val n = st(0)
     val q = st(1)
-    val nodes = Array.fill[Node](n+1)(null)
+    val nodes = Array.fill[Node](n + 1)(null)
     var inode = 0
-    while(inode <= n) {
+    while (inode <= n) {
       nodes(inode) = new Node(inode)
-      inode +=1
+      inode += 1
     }
     var iedge = 1
     while (iedge <= n - 1) {
