@@ -10,6 +10,7 @@ class Data(var u:Long, var uWithDist:Long, var res:Long=0, var version:Int){
 
 
 class Node(val inode:Int, var nodeParent:Node = null) {
+  var inK = -1
   var data:Data = null
   private var edgesI: mutable.ListBuffer[Edge] = mutable.ListBuffer[Edge]()
   var notSeenEdges: mutable.Set[Edge] = mutable.Set[Edge]()
@@ -87,11 +88,21 @@ object Solution {
     if (node.data == null || node.data.version != query) null else node.data
   }
 
-  def solve(ksList: Seq[Node], query: Int): Long = {
+  def solve(ksList: Array[Node], query: Int): Long = {
     val mod = 1000000007
     var res = 0L
-    val ks = ksList.toSet
-    val ks1 = mutable.Queue[Node](ksList.sortBy(node => -node.getDistanceFromRoot()): _*)
+    var qqq=0
+
+    scala.util.Sorting.quickSort(ksList)(Ordering.by(node => -node.getDistanceFromRoot()))
+    val ks1 = mutable.Queue[Node]()
+
+    while(qqq<ksList.length){
+      val node = ksList(qqq)
+      node.inK = query
+      ks1.enqueue(node)
+      qqq+=1
+    }
+
     val ks2 = mutable.Queue[Node]()
     while (ks1.size + ks2.size > 1) {
       val q =
@@ -109,7 +120,7 @@ object Solution {
       val node = q.dequeue()
 
       if (dataGet(node, query) == null) {
-        val data = new Data(if (ks.contains(node)) node.inode else 0, 0, 0, query)
+        val data = new Data(if(node.inK == query) node.inode else 0, 0, 0, query)
         val v = data.u
 
         node.data = data
