@@ -89,8 +89,8 @@ object Solution {
 
   def solve(ksList: Seq[Node], query: Int): Long = {
     val mod = 1000000007
+    val b = Long.MaxValue / mod * mod
     var res = 0L
-
     val ks = ksList.toSet
     val ksSorted = mutable.PriorityQueue(ksList: _*)(Ordering.by(node => node.getDistanceFromRoot()))
 
@@ -102,7 +102,22 @@ object Solution {
 
         node.data = data
 
-        var i = 0
+        var uSum = 0L
+        var uWithDistSum = 0L
+        var j = 0
+        while (j < node.edges.length) {
+          val edgeJ = node.edges(j)
+          val oJ = edgeJ.otherNode(node)
+          val dataJ = dataGet(oJ, query)
+
+          if (dataJ != null) {
+            uSum += dataJ.u
+            uWithDistSum += dataJ.uWithDist
+          }
+          j+=1
+        }
+        var i=0
+        var neighbours = 0L
         while (i < node.edges.length) {
           val edgeI = node.edges(i)
           val oI = edgeI.otherNode(node)
@@ -113,23 +128,16 @@ object Solution {
             data.uWithDist = (data.uWithDist + dataI.uWithDist + dataI.u) % mod
             data.res = (data.res + 1 * v * dataI.u + dataI.uWithDist * v + dataI.res) % mod
 
-            var j = i + 1
-            while (j < node.edges.length) {
-              val edgeJ = node.edges(j)
-              val oJ = edgeJ.otherNode(node)
-              val dataJ = dataGet(oJ, query)
-
-              if (dataJ != null) {
-                data.res = (data.res + 2 * dataJ.u * dataI.u + dataI.uWithDist * dataJ.u + dataJ.uWithDist * dataI.u) % mod
-              }
-
-              j += 1
-            }
-
+            neighbours +=
+              2 * dataI.u * (uSum - dataI.u) +
+              dataI.uWithDist * (uSum - dataI.u) +
+              dataI.u * (uWithDistSum - dataI.uWithDist)
           }
+
           i += 1
         }
 
+        data.res = (data.res + (neighbours >>> 1)) % mod
         if (node.nodeParent != null) {
           ksSorted.enqueue(node.nodeParent)
         }
@@ -144,10 +152,10 @@ object Solution {
 
 
   def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in11.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in.txt")))
     val t1 = System.currentTimeMillis()
 
-    var st = readLine().split(" ").map(stI => stI.toInt)
+    val st = readLine().split(" ").map(stI => stI.toInt)
     val n = st(0)
     val q = st(1)
     val nodes = Array.fill[Node](n+1)(null)
