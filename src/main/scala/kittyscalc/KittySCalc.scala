@@ -12,9 +12,11 @@ class Data2(var nodes: mutable.ArrayBuffer[Node], var version:Int){
 }
 
 class Node(val inode:Int, var nodeParent:Node = null) {
+  def hasData(query: Int) = data.version == query
+
 
   var inK = -1
-  var data: Data = null
+  var data: Data = new Data(0, 0, 0, -1)
   var data2: Data2 = new Data2(new mutable.ArrayBuffer[Node](), -1)
 
   var notSeenEdges: mutable.Set[Edge] = mutable.Set[Edge]()
@@ -86,9 +88,6 @@ object Solution {
   }
 
 
-  def dataGet(node: Node, query: Int): Data = {
-    if (node.data == null || node.data.version != query) null else node.data
-  }
   def data2Get(node: Node, query: Int): Data2 = {
     if (node.data2 == null || node.data2.version != query) null else node.data2
   }
@@ -150,9 +149,13 @@ object Solution {
     while (pq.hasMore()) {
       kor += 1
       val node = pq.dequeue()
-      if (dataGet(node, query) == null) {
+      if (!node.hasData(query)) {
         kor2 += 1
-        val data = new Data(if (node.inK == query) node.inode else 0, 0, 0, query)
+        val data = node.data
+        data.u =if (node.inK == query) node.inode else 0
+        data.res = 0
+        data.uWithDist = 0
+        data.version = query
         val v = data.u
 
         node.data = data
@@ -166,7 +169,7 @@ object Solution {
           val nodesArray = data2.nodes.toArray
           var j = 0
           while (j < nodesArray.length) {
-            val dataJ = dataGet(nodesArray(j), query)
+            val dataJ = nodesArray(j).data
             uSum += dataJ.u
             uWithDistSum += dataJ.uWithDist
             resSum += dataJ.res
@@ -176,7 +179,7 @@ object Solution {
           var neighbours = 0L
           var i = 0
           while (i < nodesArray.length) {
-            val dataI = dataGet(nodesArray(i), query)
+            val dataI = nodesArray(i).data
 
             neighbours +=
               2 * dataI.u * (uSum - dataI.u) +
@@ -191,10 +194,10 @@ object Solution {
         }
 
         if (node.nodeParent != null) {
-          if (dataGet(node.nodeParent, query) == null) {
+          if (!node.nodeParent.hasData(query)) {
             pq.enqueue(node.nodeParent)
-
           }
+
           if (node.nodeParent.data2.version != query) {
             node.nodeParent.data2.version = query
             node.nodeParent.data2.nodes.clear()
@@ -327,15 +330,18 @@ object Solution {
 
     var kprev:Array[Node] = null
     var i = 1
+    var sb = new mutable.StringBuilder()
     while (i <= q) {
       val c = readLine().toInt
       val k = readLine().split(" ").map(st => nodes(st.toInt))
       val ress = solve(pq, k, i)
-      println(ress)
+      sb.append(ress)
+      sb.append("\n")
       i += 1
       kprev = k
     }
 
+    println(sb)
     println((System.currentTimeMillis() - t1) / 1000.0)
   }
 
