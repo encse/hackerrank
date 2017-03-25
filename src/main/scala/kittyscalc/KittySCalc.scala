@@ -100,50 +100,6 @@ object Solution {
     }
   }
 
-
-  def data2Get(node: Node, query: Int): Data2 = {
-    if (node.data2.version != query) null else node.data2
-  }
-
-  def dist(nodeA:Node, nodeB:Node) : Long = {
-    var d = 0L
-    var nodeAT = nodeA
-    var dA = nodeAT.getDistanceFromRoot()
-    var nodeBT = nodeB
-    var dB = nodeBT.getDistanceFromRoot()
-    while (nodeAT != nodeBT && dA > 0 && dB > 0) {
-      if (dA > dB){
-        nodeAT = nodeAT.nodeParent
-        d+=1
-        dA -=1
-      } else{
-        nodeBT = nodeBT.nodeParent
-        d+=1
-        dB -=1
-      }
-    }
-
-    if(nodeAT == nodeBT)
-      d
-    else
-      d + dA + dB
-  }
-  def bf(ksList: Array[Node]): Long ={
-    var res = 0L
-    var i=0
-    while(i<ksList.length){
-      var nodeA = ksList(i)
-      var j=i+1
-      while(j<ksList.length) {
-        var nodeB = ksList(j)
-        var d = dist(nodeA, nodeB)
-        res = (res + d * nodeA.inode * nodeB.inode) % mod
-        j+=1
-      }
-      i+=1
-    }
-    res
-  }
   def solve(pq: PQueue, ksList: Array[Node], query: Int): Long = {
 
     var res = 0L
@@ -157,21 +113,17 @@ object Solution {
       qqq += 1
     }
 
-    while (pq.hasMore()) {
+    while (pq.nonEmpty) {
       val node = pq.dequeue()
       val data = node.data
-      data.u = if (node.inK == query) node.inode else 0
-      data.res = 0
-      data.uWithDist = 0
-      data.version = query
-      val v = data.u
-
-      node.data = data
-
+      val data2 = if (node.data2.version == query) node.data2 else null
       var uSum = 0L
       var uWithDistSum = 0L
       var resSum = 0L
-      val data2 = data2Get(node, query)
+
+      data.u = if (node.inK == query) node.inode else 0
+      data.res = 0
+      data.uWithDist = 0
 
       if (data2 != null) {
         var j = 0
@@ -189,22 +141,20 @@ object Solution {
           val dataI = data2(i).data
 
           neighbours +=
-            2 * dataI.u * (uSum - dataI.u) +
-              dataI.uWithDist * (uSum - dataI.u) +
+            ((dataI.u << 1) + dataI.uWithDist) * (uSum - dataI.u) +
               dataI.u * (uWithDistSum - dataI.uWithDist)
           i += 1
         }
 
+        data.res = (data.res + data.u * (uSum + uWithDistSum) + resSum + (neighbours >>> 1)) % mod
         data.u = (data.u + uSum) % mod
         data.uWithDist = (data.uWithDist + uSum + uWithDistSum) % mod
-        data.res = (data.res + v * (uSum + uWithDistSum) + resSum + (neighbours >>> 1)) % mod
       }
 
-      if (node.nodeParent != null) {
-
-        if (node.nodeParent.data.version != query) {
-          node.nodeParent.data.version = query
-          if (node.nodeParent.inK != query) {
+      if (node.nodeParent != null && pq.nonEmpty) {
+        if (node.nodeParent.inK != query) {
+          if (node.nodeParent.data.version != query) {
+            node.nodeParent.data.version = query
             pq.enqueue(node.nodeParent)
           }
         }
@@ -214,7 +164,6 @@ object Solution {
           node.nodeParent.data2.clear()
         }
         node.nodeParent.data2.add(node)
-
       }
 
       res = data.res
@@ -227,7 +176,7 @@ object Solution {
     private var iitems: Array[Node] = _
     private var jitems: Array[Node] = Array.ofDim[Node](nodeCount)
     private var iitemsFirst:Int = _
-    private var iitemsNext:Int = _ //iitems.length
+    private var iitemsNext:Int = _
     private var jitemsFirst:Int = _
     private var jitemsNext:Int = _
 
@@ -242,7 +191,7 @@ object Solution {
 
     }
 
-    def hasMore(): Boolean = iitemsNext - iitemsFirst > 0 || jitemsNext - jitemsFirst > 0
+    def nonEmpty: Boolean = iitemsNext - iitemsFirst > 0 || jitemsNext - jitemsFirst > 0
 
     def enqueue(item: Node): Unit = {
       jitems(jitemsNext) = item
@@ -271,14 +220,89 @@ object Solution {
     }
   }
 
+  def readInt() = {
+    val st = readLine()
+    var d = 0
+
+    var ich = 0
+    var ik = 0
+    while(ich < st.length){
+      val ch = st(ich)
+      d = 10 * d + ch - '0'
+      ich+=1
+    }
+    d
+  }
+
+  def readInts(c:Int) = {
+    val st = readLine()
+
+    var d = 0
+
+    val res = Array.ofDim[Int](c)
+
+    var ich = 0
+    var ik = 0
+    while(ich < st.length){
+      val ch = st(ich)
+      if(ch == ' ') {
+        res(ik) = d
+        ik += 1
+        d = 0
+      } else {
+        d = 10 * d + ch - '0'
+      }
+      ich+=1
+
+    }
+    res(ik) = d
+    res
+  }
+
+  def readNodes(nodes:Array[Node]) = {
+    val st = readLine()
+
+    var ich = 0
+    var ck = 1
+    var d = 0
+
+    while(ich < st.length){
+      val ch = st(ich)
+      if(ch == ' ') {
+        ck+=1
+      }
+      ich+=1
+
+    }
+    val res = Array.ofDim[Node](ck)
+
+
+    ich = 0
+    var ik = 0
+    while(ich < st.length){
+      val ch = st(ich)
+      if(ch == ' ') {
+        res(ik) = nodes(d)
+        ik += 1
+        d = 0
+      } else {
+        d = 10 * d + ch - '0'
+      }
+      ich+=1
+
+    }
+    res(ik) = nodes(d)
+    res
+  }
+
   def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in20.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in17.txt")))
     val t1 = System.currentTimeMillis()
 
     val st = readLine().split(" ").map(stI => stI.toInt)
     val n = st(0)
     val q = st(1)
-    val nodes = Array.fill[Node](n + 1)(null)
+    val nodes = Array.ofDim[Node](n + 1)
     var inode = 0
     while (inode <= n) {
       nodes(inode) = new Node(inode)
@@ -286,12 +310,8 @@ object Solution {
     }
     var iedge = 1
     while (iedge <= n - 1) {
-      val st = readLine()
-      var ich = st.indexOf(" ")
-      val inodeA = st.substring(0, ich).toInt
-      val inodeB = st.substring(ich + 1).toInt
-
-      val edge = new Edge(iedge, nodes(inodeA), nodes(inodeB))
+      val inodes = readInts(2)
+      val edge = new Edge(iedge, nodes(inodes(0)), nodes(inodes(1)))
       edge.nodeA.addEdge(edge)
       edge.nodeB.addEdge(edge)
       iedge += 1
@@ -311,8 +331,8 @@ object Solution {
     var i = 1
     var sb = new mutable.StringBuilder()
     while (i <= q) {
-      val c = readLine().toInt
-      val k = readLine().split(" ").map(st => nodes(st.toInt))
+      val c = readInt()
+      val k = readNodes(nodes)
       val ress = solve(pq, k, i)
       sb.append(ress)
       sb.append("\n")
