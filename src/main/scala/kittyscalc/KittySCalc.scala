@@ -7,7 +7,19 @@ import scala.collection.mutable
 class Data(var u:Long, var uWithDist:Long, var res:Long=0, var version:Int){
 
 }
-class Data2(var nodes: mutable.ArrayBuffer[Node], var version:Int){
+class Data2(var nodeCount:Int){
+  var version:Int = -1
+  private var nodes = Array.ofDim[Node](nodeCount)
+  def apply(i:Int):Node = nodes(i)
+
+  var length = 0
+  def add(node:Node) = {
+    nodes(length) = node
+    length +=1
+  }
+  def clear(): Unit ={
+    length = 0
+  }
 
 }
 
@@ -17,12 +29,14 @@ class Node(val inode:Int, var nodeParent:Node = null) {
 
   var inK = -1
   var data: Data = new Data(0, 0, 0, -1)
-  var data2: Data2 = new Data2(new mutable.ArrayBuffer[Node](), -1)
+  var data2: Data2 = null
 
+  var edgeCount = 0
   var notSeenEdges: mutable.Set[Edge] = mutable.Set[Edge]()
 
   def addEdge(edge: Edge): Unit = {
     notSeenEdges.add(edge)
+    edgeCount+=1
   }
 
   def seenEdge(edge: Edge): Unit = {
@@ -89,7 +103,7 @@ object Solution {
 
 
   def data2Get(node: Node, query: Int): Data2 = {
-    if (node.data2 == null || node.data2.version != query) null else node.data2
+    if (node.data2 != null && node.data2.version != query) null else node.data2
   }
 
   def dist(nodeA:Node, nodeB:Node) : Long = {
@@ -144,15 +158,11 @@ object Solution {
       qqq += 1
     }
 
-    var kor = 0
-    var kor2 = 0
     while (pq.hasMore()) {
-      kor += 1
       val node = pq.dequeue()
       if (!node.hasData(query)) {
-        kor2 += 1
         val data = node.data
-        data.u =if (node.inK == query) node.inode else 0
+        data.u = if (node.inK == query) node.inode else 0
         data.res = 0
         data.uWithDist = 0
         data.version = query
@@ -166,26 +176,25 @@ object Solution {
         val data2 = data2Get(node, query)
 
         if (data2 != null) {
-          val nodesArray = data2.nodes.toArray
           var j = 0
-          while (j < nodesArray.length) {
-            val dataJ = nodesArray(j).data
+          while (j < data2.length) {
+            val dataJ = data2(j).data
             uSum += dataJ.u
             uWithDistSum += dataJ.uWithDist
             resSum += dataJ.res
-            j+=1
+            j += 1
           }
 
           var neighbours = 0L
           var i = 0
-          while (i < nodesArray.length) {
-            val dataI = nodesArray(i).data
+          while (i < data2.length) {
+            val dataI = data2(i).data
 
             neighbours +=
               2 * dataI.u * (uSum - dataI.u) +
                 dataI.uWithDist * (uSum - dataI.u) +
                 dataI.u * (uWithDistSum - dataI.uWithDist)
-            i+=1
+            i += 1
           }
 
           data.u = (data.u + uSum) % mod
@@ -197,12 +206,15 @@ object Solution {
           if (!node.nodeParent.hasData(query)) {
             pq.enqueue(node.nodeParent)
           }
+          if (node.nodeParent.data2 == null) {
+            node.nodeParent.data2 = new Data2(node.nodeParent.edgeCount)
+          }
 
           if (node.nodeParent.data2.version != query) {
             node.nodeParent.data2.version = query
-            node.nodeParent.data2.nodes.clear()
+            node.nodeParent.data2.clear()
           }
-          node.nodeParent.data2.nodes.append(node)
+          node.nodeParent.data2.add(node)
         }
 
         res = data.res
@@ -259,41 +271,6 @@ object Solution {
     }
   }
 
-  def check(kPrev:Array[Node], k: Array[Node]) = {
-    scala.util.Sorting.quickSort(kPrev)(Ordering.by(node => node.inode))
-    scala.util.Sorting.quickSort(k)(Ordering.by(node => node.inode))
-
-    var iP= 0
-    var i = 0
-    var added = 0
-    var removed = 0
-    var common = 0
-    while(iP < kPrev.length || i<k.length) {
-      if (iP < kPrev.length && i < k.length) {
-        if(kPrev(iP).inode < k(i).inode){
-          removed+=1
-          iP +=1
-        } else if(k(i).inode < kPrev(iP).inode){
-          added +=1
-          i +=1
-        } else {
-          iP+=1
-          i+=1
-          common+=1
-        }
-
-      } else if (iP < kPrev.length) {
-        removed+=1
-        iP +=1
-      }
-      else {
-        added +=1
-        i +=1
-      }
-    }
-    //println(s"length: ${k.length}, added: $added, removed: $removed, common: ${100*common/k.length}")
-  }
-
   def main(args: Array[String]) {
     System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in17.txt")))
     val t1 = System.currentTimeMillis()
@@ -328,7 +305,6 @@ object Solution {
     println((System.currentTimeMillis() - t1) / 1000.0)
     val pq = new PQueue(nodes.length)
 
-    var kprev:Array[Node] = null
     var i = 1
     var sb = new mutable.StringBuilder()
     while (i <= q) {
@@ -338,7 +314,6 @@ object Solution {
       sb.append(ress)
       sb.append("\n")
       i += 1
-      kprev = k
     }
 
     println(sb)
