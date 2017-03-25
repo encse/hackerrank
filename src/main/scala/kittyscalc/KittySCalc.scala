@@ -24,7 +24,6 @@ class Data2(var nodeCount:Int){
 }
 
 class Node(val inode:Int, var nodeParent:Node = null) {
-  def hasData(query: Int) = data.version == query
 
 
   var inK = -1
@@ -103,7 +102,7 @@ object Solution {
 
 
   def data2Get(node: Node, query: Int): Data2 = {
-    if (node.data2 != null && node.data2.version != query) null else node.data2
+    if (node.data2.version != query) null else node.data2
   }
 
   def dist(nodeA:Node, nodeB:Node) : Long = {
@@ -160,65 +159,65 @@ object Solution {
 
     while (pq.hasMore()) {
       val node = pq.dequeue()
-      if (!node.hasData(query)) {
-        val data = node.data
-        data.u = if (node.inK == query) node.inode else 0
-        data.res = 0
-        data.uWithDist = 0
-        data.version = query
-        val v = data.u
+      val data = node.data
+      data.u = if (node.inK == query) node.inode else 0
+      data.res = 0
+      data.uWithDist = 0
+      data.version = query
+      val v = data.u
 
-        node.data = data
+      node.data = data
 
-        var uSum = 0L
-        var uWithDistSum = 0L
-        var resSum = 0L
-        val data2 = data2Get(node, query)
+      var uSum = 0L
+      var uWithDistSum = 0L
+      var resSum = 0L
+      val data2 = data2Get(node, query)
 
-        if (data2 != null) {
-          var j = 0
-          while (j < data2.length) {
-            val dataJ = data2(j).data
-            uSum += dataJ.u
-            uWithDistSum += dataJ.uWithDist
-            resSum += dataJ.res
-            j += 1
-          }
-
-          var neighbours = 0L
-          var i = 0
-          while (i < data2.length) {
-            val dataI = data2(i).data
-
-            neighbours +=
-              2 * dataI.u * (uSum - dataI.u) +
-                dataI.uWithDist * (uSum - dataI.u) +
-                dataI.u * (uWithDistSum - dataI.uWithDist)
-            i += 1
-          }
-
-          data.u = (data.u + uSum) % mod
-          data.uWithDist = (data.uWithDist + uSum + uWithDistSum) % mod
-          data.res = (data.res + v * (uSum + uWithDistSum) + resSum + (neighbours >>> 1)) % mod
+      if (data2 != null) {
+        var j = 0
+        while (j < data2.length) {
+          val dataJ = data2(j).data
+          uSum += dataJ.u
+          uWithDistSum += dataJ.uWithDist
+          resSum += dataJ.res
+          j += 1
         }
 
-        if (node.nodeParent != null) {
-          if (!node.nodeParent.hasData(query)) {
+        var neighbours = 0L
+        var i = 0
+        while (i < data2.length) {
+          val dataI = data2(i).data
+
+          neighbours +=
+            2 * dataI.u * (uSum - dataI.u) +
+              dataI.uWithDist * (uSum - dataI.u) +
+              dataI.u * (uWithDistSum - dataI.uWithDist)
+          i += 1
+        }
+
+        data.u = (data.u + uSum) % mod
+        data.uWithDist = (data.uWithDist + uSum + uWithDistSum) % mod
+        data.res = (data.res + v * (uSum + uWithDistSum) + resSum + (neighbours >>> 1)) % mod
+      }
+
+      if (node.nodeParent != null) {
+
+        if (node.nodeParent.data.version != query) {
+          node.nodeParent.data.version = query
+          if (node.nodeParent.inK != query) {
             pq.enqueue(node.nodeParent)
           }
-          if (node.nodeParent.data2 == null) {
-            node.nodeParent.data2 = new Data2(node.nodeParent.edgeCount)
-          }
-
-          if (node.nodeParent.data2.version != query) {
-            node.nodeParent.data2.version = query
-            node.nodeParent.data2.clear()
-          }
-          node.nodeParent.data2.add(node)
         }
 
-        res = data.res
+        if (node.nodeParent.data2.version != query) {
+          node.nodeParent.data2.version = query
+          node.nodeParent.data2.clear()
+        }
+        node.nodeParent.data2.add(node)
+
       }
+
+      res = data.res
     }
 
     res
@@ -243,11 +242,12 @@ object Solution {
 
     }
 
-    def hasMore(): Boolean = jitemsNext - jitemsFirst + iitemsNext - iitemsFirst > 1
+    def hasMore(): Boolean = iitemsNext - iitemsFirst > 0 || jitemsNext - jitemsFirst > 0
 
     def enqueue(item: Node): Unit = {
       jitems(jitemsNext) = item
       jitemsNext += 1
+
     }
 
     def dequeue(): Node = {
@@ -272,7 +272,7 @@ object Solution {
   }
 
   def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in17.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/kittyscalc/in20.txt")))
     val t1 = System.currentTimeMillis()
 
     val st = readLine().split(" ").map(stI => stI.toInt)
@@ -297,11 +297,14 @@ object Solution {
       iedge += 1
     }
 
+    inode = 0
+    while (inode <= n) {
+      nodes(inode).data2 = new Data2(nodes(inode).edgeCount)
+      inode += 1
+    }
 
     println((System.currentTimeMillis() - t1) / 1000.0)
     buildParentGraph(nodes)
-    println(nodes.map(node => node.getDistanceFromRoot()).max)
-    println(q)
     println((System.currentTimeMillis() - t1) / 1000.0)
     val pq = new PQueue(nodes.length)
 
