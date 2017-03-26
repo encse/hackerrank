@@ -4,13 +4,13 @@ import java.io.{File, FileInputStream}
 
 import scala.collection.mutable
 
-class Data(var u:Long, var uWithDist:Long, var res:Long=0, var version:Int){
+class Data(var u:Long, var uWithDist:Long, var res:Long=0, var query:Int){
 
 }
 class Data2(var nodeCount:Int){
-  var version:Int = -1
-  private var nodes = Array.ofDim[Node](nodeCount)
-  def apply(i:Int):Node = nodes(i)
+  var query:Int = -1
+  var nodes = Array.ofDim[Node](nodeCount)
+ // def apply(i:Int):Node = nodes(i)
 
   var length = 0
   def add(node:Node) = {
@@ -43,13 +43,46 @@ class Node(val inode:Int, var nodeParent:Node = null) {
     edge.otherNode(this).notSeenEdges.remove(edge)
   }
 
-  private var distanceFromRoot = -1
+  var distanceFromRoot = -1
 
-  def getDistanceFromRoot(): Int = {
+}
 
-    if (distanceFromRoot == -1) {
+class Edge(val iedge:Int, val nodeA:Node, val nodeB:Node) {
+
+  def otherNode(node:Node): Node =
+    if(node == nodeA) nodeB else nodeA
+}
+
+
+object Solution {
+  val modulo = 1000000007
+  def mod(l:Long) = if(l<modulo) l else l % modulo
+  def precompute(nodes: Seq[Node]): Unit = {
+
+    val nodesCurrent = mutable.Queue[Node]()
+    for (node <- nodes if node.notSeenEdges.size == 1)
+      nodesCurrent.enqueue(node)
+
+    while (nodesCurrent.nonEmpty) {
+      val node = nodesCurrent.dequeue()
+      if (node.notSeenEdges.size == 1) {
+        val edge = node.notSeenEdges.head
+        node.nodeParent = edge.otherNode(node)
+        node.seenEdge(edge)
+        if (node.nodeParent.notSeenEdges.size == 1)
+          nodesCurrent.enqueue(node.nodeParent)
+      }
+    }
+
+    for (node <- nodes)
+      computeDistanceFromRoot(node)
+  }
+
+  def computeDistanceFromRoot(nodeQ:Node): Unit = {
+
+    if (nodeQ.distanceFromRoot == -1) {
       val stack = mutable.Stack[Node]()
-      var node = this
+      var node = nodeQ
 
       while (node.distanceFromRoot == -1) {
         if (node.nodeParent == null) {
@@ -66,36 +99,6 @@ class Node(val inode:Int, var nodeParent:Node = null) {
         val node = stack.pop()
         node.distanceFromRoot = d + 1
         d += 1
-      }
-    }
-    distanceFromRoot
-  }
-}
-
-class Edge(val iedge:Int, val nodeA:Node, val nodeB:Node) {
-
-  def otherNode(node:Node): Node =
-    if(node == nodeA) nodeB else nodeA
-}
-
-
-object Solution {
-  val modulo = 1000000007
-  def mod(l:Long) = if(l<modulo) l else l % modulo
-  def buildParentGraph(nodes: Seq[Node]): Unit = {
-
-    val nodesCurrent = mutable.Queue[Node]()
-    for (node <- nodes if node.notSeenEdges.size == 1)
-      nodesCurrent.enqueue(node)
-
-    while (nodesCurrent.nonEmpty) {
-      val node = nodesCurrent.dequeue()
-      if (node.notSeenEdges.size == 1) {
-        val edge = node.notSeenEdges.head
-        node.nodeParent = edge.otherNode(node)
-        node.seenEdge(edge)
-        if (node.nodeParent.notSeenEdges.size == 1)
-          nodesCurrent.enqueue(node.nodeParent)
       }
     }
   }
@@ -116,7 +119,7 @@ object Solution {
     while (pq.nonEmpty) {
       val node = pq.dequeue()
       val data = node.data
-      val data2 = if (node.data2.version == query) node.data2 else null
+      val data2 = if (node.data2.query == query) node.data2 else null
 
 
       data.u = if (node.inK == query) node.inode else 0
@@ -126,7 +129,7 @@ object Solution {
       if (data2 != null) {
 
         if (data.u == 0 && data2.length == 1) {
-          val dataJ = data2(0).data
+          val dataJ = data2.nodes(0).data
           data.u = dataJ.u
           data.res = dataJ.res
           data.uWithDist = mod(dataJ.u + dataJ.uWithDist)
@@ -138,7 +141,7 @@ object Solution {
 
           var j = 0
           while (j < data2.length) {
-            val dataJ = data2(j).data
+            val dataJ = data2.nodes(j).data
             uSum += dataJ.u
             uWithDistSum += dataJ.uWithDist
             resSum += dataJ.res
@@ -149,7 +152,7 @@ object Solution {
           var i = 0
           if (data2.length > 1) {
             while (i < data2.length) {
-              val dataI = data2(i).data
+              val dataI = data2.nodes(i).data
 
               neighbours +=
                 ((dataI.u << 1) + dataI.uWithDist) * (uSum - dataI.u) +
@@ -166,14 +169,14 @@ object Solution {
 
       if (node.nodeParent != null && pq.nonEmpty) {
         if (node.nodeParent.inK != query) {
-          if (node.nodeParent.data.version != query) {
-            node.nodeParent.data.version = query
+          if (node.nodeParent.data.query != query) {
+            node.nodeParent.data.query = query
             pq.enqueue(node.nodeParent)
           }
         }
 
-        if (node.nodeParent.data2.version != query) {
-          node.nodeParent.data2.version = query
+        if (node.nodeParent.data2.query != query) {
+          node.nodeParent.data2.query = query
           node.nodeParent.data2.clear()
         }
         node.nodeParent.data2.add(node)
@@ -195,7 +198,7 @@ object Solution {
 
     def init(iitems: Array[Node]): Unit = {
       this.iitems = iitems
-      scala.util.Sorting.quickSort(iitems)(Ordering.by(node => -node.getDistanceFromRoot()))
+      scala.util.Sorting.quickSort(iitems)(Ordering.by(node => -node.distanceFromRoot))
 
       iitemsFirst = 0
       iitemsNext = iitems.length
@@ -204,7 +207,7 @@ object Solution {
 
     }
 
-    def nonEmpty: Boolean = iitemsNext - iitemsFirst > 0 || jitemsNext - jitemsFirst > 0
+    def nonEmpty: Boolean = iitemsNext > iitemsFirst || jitemsNext > jitemsFirst
 
     def enqueue(item: Node): Unit = {
       jitems(jitemsNext) = item
@@ -213,10 +216,10 @@ object Solution {
     }
 
     def dequeue(): Node = {
-      val ks1NonEmpty = iitemsNext - iitemsFirst > 0
-      val ks2NonEmpty = jitemsNext - jitemsFirst > 0
+      val ks1NonEmpty = iitemsNext > iitemsFirst
+      val ks2NonEmpty = jitemsNext > jitemsFirst
       if (ks1NonEmpty && ks2NonEmpty) {
-        if (iitems(iitemsFirst).getDistanceFromRoot() > jitems(jitemsFirst).getDistanceFromRoot()) {
+        if (iitems(iitemsFirst).distanceFromRoot > jitems(jitemsFirst).distanceFromRoot) {
           iitemsFirst += 1
           iitems(iitemsFirst - 1)
         } else {
@@ -337,7 +340,7 @@ object Solution {
     }
 
     println((System.currentTimeMillis() - t1) / 1000.0)
-    buildParentGraph(nodes)
+    precompute(nodes)
     println((System.currentTimeMillis() - t1) / 1000.0)
     val pq = new PQueue(nodes.length)
 
