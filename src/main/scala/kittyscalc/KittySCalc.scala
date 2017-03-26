@@ -80,8 +80,8 @@ class Edge(val iedge:Int, val nodeA:Node, val nodeB:Node) {
 
 
 object Solution {
-  val mod = 1000000007
-
+  val modulo = 1000000007
+  def mod(l:Long) = if(l<modulo) l else l % modulo
   def buildParentGraph(nodes: Seq[Node]): Unit = {
 
     val nodesCurrent = mutable.Queue[Node]()
@@ -117,38 +117,51 @@ object Solution {
       val node = pq.dequeue()
       val data = node.data
       val data2 = if (node.data2.version == query) node.data2 else null
-      var uSum = 0L
-      var uWithDistSum = 0L
-      var resSum = 0L
+
 
       data.u = if (node.inK == query) node.inode else 0
       data.res = 0
       data.uWithDist = 0
 
       if (data2 != null) {
-        var j = 0
-        while (j < data2.length) {
-          val dataJ = data2(j).data
-          uSum += dataJ.u
-          uWithDistSum += dataJ.uWithDist
-          resSum += dataJ.res
-          j += 1
+
+        if (data.u == 0 && data2.length == 1) {
+          val dataJ = data2(0).data
+          data.u = dataJ.u
+          data.res = dataJ.res
+          data.uWithDist = mod(dataJ.u + dataJ.uWithDist)
+        } else {
+
+          var uSum = 0L
+          var uWithDistSum = 0L
+          var resSum = 0L
+
+          var j = 0
+          while (j < data2.length) {
+            val dataJ = data2(j).data
+            uSum += dataJ.u
+            uWithDistSum += dataJ.uWithDist
+            resSum += dataJ.res
+            j += 1
+          }
+
+          var neighbours = 0L
+          var i = 0
+          if (data2.length > 1) {
+            while (i < data2.length) {
+              val dataI = data2(i).data
+
+              neighbours +=
+                ((dataI.u << 1) + dataI.uWithDist) * (uSum - dataI.u) +
+                  dataI.u * (uWithDistSum - dataI.uWithDist)
+              i += 1
+            }
+          }
+
+          data.res = mod(data.res + data.u * (uSum + uWithDistSum) + resSum + (neighbours >>> 1))
+          data.u = mod(data.u + uSum)
+          data.uWithDist = mod(data.uWithDist + uSum + uWithDistSum)
         }
-
-        var neighbours = 0L
-        var i = 0
-        while (i < data2.length) {
-          val dataI = data2(i).data
-
-          neighbours +=
-            ((dataI.u << 1) + dataI.uWithDist) * (uSum - dataI.u) +
-              dataI.u * (uWithDistSum - dataI.uWithDist)
-          i += 1
-        }
-
-        data.res = (data.res + data.u * (uSum + uWithDistSum) + resSum + (neighbours >>> 1)) % mod
-        data.u = (data.u + uSum) % mod
-        data.uWithDist = (data.uWithDist + uSum + uWithDistSum) % mod
       }
 
       if (node.nodeParent != null && pq.nonEmpty) {
