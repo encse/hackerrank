@@ -4,34 +4,32 @@ import java.io.{File, FileInputStream}
 
 import scala.collection.mutable
 
-class Data(var u:Long, var uWithDist:Long, var res:Long=0, var query:Int){
 
-}
 class Data2(var nodeCount:Int){
-  var query:Int = -1
-  var nodes = Array.ofDim[Node](nodeCount)
- // def apply(i:Int):Node = nodes(i)
 
-  var length = 0
-  def add(node:Node) = {
-    nodes(length) = node
-    length +=1
-  }
-  def clear(): Unit ={
-    length = 0
-  }
 
 }
 
 class Node(val inode:Int, var nodeParent:Node = null) {
-
-
   var inK = -1
-  var data: Data = new Data(0, 0, 0, -1)
-  var data2: Data2 = null
-
+  var u:Long = 0
+  var uWithDist:Long = 0
+  var res:Long=0
+  var query:Int = -1
+  var distanceFromRoot = -1
+  var siblingsVersion:Int = -1
+  var siblings:Array[Node] = _
+  var siblingCount = 0
   var edgeCount = 0
   var notSeenEdges: mutable.Set[Edge] = mutable.Set[Edge]()
+
+  def addSibling(node:Node) = {
+    siblings(siblingCount) = node
+    siblingCount +=1
+  }
+  def clearSiblings(): Unit ={
+    siblingCount = 0
+  }
 
   def addEdge(edge: Edge): Unit = {
     notSeenEdges.add(edge)
@@ -42,9 +40,6 @@ class Node(val inode:Int, var nodeParent:Node = null) {
     notSeenEdges.remove(edge)
     edge.otherNode(this).notSeenEdges.remove(edge)
   }
-
-  var distanceFromRoot = -1
-
 }
 
 class Edge(val iedge:Int, val nodeA:Node, val nodeB:Node) {
@@ -74,8 +69,10 @@ object Solution {
       }
     }
 
-    for (node <- nodes)
+    for (node <- nodes) {
       computeDistanceFromRoot(node)
+      node.siblings = Array.ofDim[Node](node.edgeCount)
+    }
   }
 
   def computeDistanceFromRoot(nodeQ:Node): Unit = {
@@ -118,8 +115,8 @@ object Solution {
 
     while (pq.nonEmpty) {
       val node = pq.dequeue()
-      val data = node.data
-      val data2 = if (node.data2.query == query) node.data2 else null
+      val data = node
+      val data2 = if (node.siblingsVersion == query) node else null
 
 
       data.u = if (node.inK == query) node.inode else 0
@@ -128,8 +125,8 @@ object Solution {
 
       if (data2 != null) {
 
-        if (data.u == 0 && data2.length == 1) {
-          val dataJ = data2.nodes(0).data
+        if (data.u == 0 && data2.siblingCount == 1) {
+          val dataJ = data2.siblings(0)
           data.u = dataJ.u
           data.res = dataJ.res
           data.uWithDist = mod(dataJ.u + dataJ.uWithDist)
@@ -140,8 +137,8 @@ object Solution {
           var resSum = 0L
 
           var j = 0
-          while (j < data2.length) {
-            val dataJ = data2.nodes(j).data
+          while (j < data2.siblingCount) {
+            val dataJ = data2.siblings(j)
             uSum += dataJ.u
             uWithDistSum += dataJ.uWithDist
             resSum += dataJ.res
@@ -150,9 +147,9 @@ object Solution {
 
           var neighbours = 0L
           var i = 0
-          if (data2.length > 1) {
-            while (i < data2.length) {
-              val dataI = data2.nodes(i).data
+          if (data2.siblingCount > 1) {
+            while (i < data2.siblingCount) {
+              val dataI = data2.siblings(i)
 
               neighbours +=
                 ((dataI.u << 1) + dataI.uWithDist) * (uSum - dataI.u) +
@@ -169,17 +166,17 @@ object Solution {
 
       if (node.nodeParent != null && pq.nonEmpty) {
         if (node.nodeParent.inK != query) {
-          if (node.nodeParent.data.query != query) {
-            node.nodeParent.data.query = query
+          if (node.nodeParent.query != query) {
+            node.nodeParent.query = query
             pq.enqueue(node.nodeParent)
           }
         }
 
-        if (node.nodeParent.data2.query != query) {
-          node.nodeParent.data2.query = query
-          node.nodeParent.data2.clear()
+        if (node.nodeParent.siblingsVersion != query) {
+          node.nodeParent.siblingsVersion = query
+          node.nodeParent.clearSiblings()
         }
-        node.nodeParent.data2.add(node)
+        node.nodeParent.addSibling(node)
       }
 
       res = data.res
@@ -333,11 +330,7 @@ object Solution {
       iedge += 1
     }
 
-    inode = 0
-    while (inode <= n) {
-      nodes(inode).data2 = new Data2(nodes(inode).edgeCount)
-      inode += 1
-    }
+
 
     println((System.currentTimeMillis() - t1) / 1000.0)
     precompute(nodes)
