@@ -6,7 +6,7 @@ import java.io.{File, FileInputStream}
 object Crush {
 
   def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/in.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/in1.txt")))
 
     val sc = new java.util.Scanner(System.in)
     val L = sc.nextInt()
