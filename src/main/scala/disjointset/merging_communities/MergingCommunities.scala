@@ -1,43 +1,31 @@
-package heap.find_the_running_median
+package disjointset.merging_communities
 
 import java.io.{File, FileInputStream}
 
 import scala.collection.mutable
 
-class MinMaxMedianHeap {
-  private var _m: Int = -1
-  private var size = 0
-  private var ltHeap = mutable.PriorityQueue[Int]()
-  private var geHeap = mutable.PriorityQueue[Int]()(Ordering.by(i => -i))
+class Community {
+  var size: Int = 1
+  var parent: Community = null
 
-  def median: Double = {
-    if (size % 2 == 1) {
-      _m
-    } else {
-      (_m + geHeap.head) / 2.0
+  def root: Community = {
+    if (parent == null)
+      this
+    else {
+      val res = parent.root
+      this.parent = res
+      res
     }
   }
 
-  def add(item: Int): Unit = {
-    size += 1
-    if(size == 1 ){
-      _m = item
-    }
-    else if (item < _m) {
-      ltHeap.enqueue(item)
-      while (ltHeap.size != geHeap.size && ltHeap.size +1 != geHeap.size) {
-        geHeap.enqueue(_m)
-        _m = ltHeap.dequeue()
-      }
-    } else {
-      geHeap.enqueue(item)
-      while (ltHeap.size != geHeap.size && ltHeap.size +1 != geHeap.size) {
-        ltHeap.enqueue(_m)
-        _m = geHeap.dequeue()
-      }
+  def mergeWith(c: Community): Unit = {
+    val r1 = root
+    val r2 = c.root
+    if (r1 != r2) {
+      r1.size += r2.size
+      r2.parent = r1
     }
   }
-
 }
 
 object Solution {
@@ -48,10 +36,19 @@ object Solution {
     val sc = new java.util.Scanner(System.in)
 
     val n = sc.nextInt()
-    val mmmHeap = new MinMaxMedianHeap()
-    for (i <- 1 to n) {
-      mmmHeap.add(sc.nextInt())
-      println(mmmHeap.median)
+    val q = sc.nextInt()
+    val communities = Array.fill[Community](n+1)(new Community)
+    
+    sc.nextLine()
+    for (i <- 1 to q) {
+      var line = sc.nextLine().split(" ")
+      if (line(0) == "Q"){
+        println(communities(line(1).toInt).root.size)
+      } else {
+        val c1 = communities(line(1).toInt)
+        val c2 = communities(line(2).toInt)
+        c1.mergeWith(c2)
+      }
     }
   }
 

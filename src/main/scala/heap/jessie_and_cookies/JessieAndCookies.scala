@@ -1,4 +1,4 @@
-package heap.jessieandcookies
+package heap.jessie_and_cookies
 
 import java.io.{File, FileInputStream}
 import java.util
