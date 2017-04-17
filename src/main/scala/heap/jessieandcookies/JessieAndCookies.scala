@@ -1,8 +1,7 @@
-package jessieandcookies
+package heap.jessieandcookies
 
 import java.io.{File, FileInputStream}
 import java.util
-
 
 object Solution {
 
@@ -25,7 +24,7 @@ object Solution {
   }
 
   def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/${getClass.getPackage.getName}/in18.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/${getClass.getPackage.getName.replace('.','/')}/in1.txt")))
     val sc = new java.util.Scanner(System.in)
 
     val n = sc.nextInt()

@@ -1,4 +1,4 @@
-package qheap1
+package heap.qheap1
 
 import java.io.{File, FileInputStream}
 
@@ -9,7 +9,7 @@ object Solution {
 
 
   def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/${getClass.getPackage.getName}/in1.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/${getClass.getPackage.getName.replace('.','/')}/in1.txt")))
     val sc = new java.util.Scanner(System.in)
 
     val q = sc.nextInt()

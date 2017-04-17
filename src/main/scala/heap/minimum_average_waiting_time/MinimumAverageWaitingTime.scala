@@ -1,4 +1,4 @@
-package minimumaveragewaitingtime
+package heap.minimum_average_waiting_time
 
 import java.io.{File, FileInputStream}
 import scala.collection.mutable
@@ -7,7 +7,7 @@ object Solution {
 
 
   def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/${getClass.getPackage.getName}/in1.txt")))
+    System.setIn(new FileInputStream(new File(s"src/main/scala/${getClass.getPackage.getName.replace('.','/')}/in1.txt")))
     val sc = new java.util.Scanner(System.in)
 
     val n = sc.nextInt()
