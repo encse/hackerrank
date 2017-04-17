@@ -1,4 +1,4 @@
-package stacks.andorxor
+package stacks.and_or_xor
 
 import java.io.{File, FileInputStream}
 

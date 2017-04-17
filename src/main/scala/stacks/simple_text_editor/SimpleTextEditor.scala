@@ -1,4 +1,4 @@
-package stacks.simpletexteditor
+package stacks.simple_text_editor
 
 import java.io.{File, FileInputStream}
 

@@ -1,4 +1,4 @@
-package queues.querieswithfixedlength
+package queues.queries_with_fixed_length
 
 import java.io.{File, FileInputStream}
 

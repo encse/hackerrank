@@ -1,4 +1,4 @@
-package stacks.gameoftwostacks
+package stacks.game_of_two_stacks
 
 import java.io.{File, FileInputStream}
 

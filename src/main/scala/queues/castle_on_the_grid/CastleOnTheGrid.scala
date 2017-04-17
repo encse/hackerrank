@@ -1,4 +1,4 @@
-package queues.castleonthegrid
+package queues.castle_on_the_grid
 
 import java.io.{File, FileInputStream}
 

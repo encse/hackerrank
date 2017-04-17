@@ -1,4 +1,4 @@
-package trees.kittyscalc
+package trees.kittys_calc
 
 import java.io.{File, FileInputStream}
 

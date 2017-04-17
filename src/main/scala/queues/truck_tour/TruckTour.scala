@@ -1,4 +1,4 @@
-package queues.trucktour
+package queues.truck_tour
 
 import java.io.{File, FileInputStream}
 

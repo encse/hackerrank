@@ -1,4 +1,4 @@
-package trees.swapnodes
+package trees.swap_nodes
 
 import java.io.{File, FileInputStream}
 

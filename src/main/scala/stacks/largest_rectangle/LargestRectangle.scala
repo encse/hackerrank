@@ -1,4 +1,4 @@
-package stacks.largestrectangle
+package stacks.largest_rectangle
 
 import java.io.{File, FileInputStream}
 

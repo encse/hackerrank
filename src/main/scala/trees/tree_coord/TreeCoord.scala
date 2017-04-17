@@ -1,4 +1,4 @@
-package trees.treecoord
+package trees.tree_coord
 
 import java.io.{File, FileInputStream}
 

@@ -1,32 +1,8 @@
-package arrays.algorithmic_crush
+package arrays
 
 import java.io.{File, FileInputStream}
 
-//https://www.hackerrank.com/challenges/crush/
-object Solution {
 
-  def main(args: Array[String]) {
-    System.setIn(new FileInputStream(new File(s"src/main/scala/in1.txt")))
-
-    val sc = new java.util.Scanner(System.in)
-    val L = sc.nextInt()
-    val Q = sc.nextInt()
-    val f = newRange(L)
-    for (i <- 0 until Q) {
-      val (a, b, s) = (sc.nextInt(), sc.nextInt(), sc.nextInt())
-      f.update(a, b, s)
-    }
-
-    println(f.max)
-  }
-
-  def newRange(l: Int): Range = {
-    var q = 1
-    while (q < l)
-      q *= 2
-    Range(1, q, 0)
-  }
-}
 
 
 case class Range(var from: Int, var to: Int, var v: Long, var left: Range = null, var right: Range = null) {

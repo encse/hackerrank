@@ -1,4 +1,4 @@
-package queues.downtozeroii
+package queues.down_to_zero_II
 
 import java.io.{File, FileInputStream}
 

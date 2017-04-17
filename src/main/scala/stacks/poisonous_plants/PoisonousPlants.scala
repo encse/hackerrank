@@ -1,4 +1,4 @@
-package stacks.poisonousplants
+package stacks.poisonous_plants
 
 import java.io.{File, FileInputStream}
 

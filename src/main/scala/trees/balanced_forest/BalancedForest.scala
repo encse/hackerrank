@@ -1,4 +1,4 @@
-package trees.balancedforest
+package trees.balanced_forest
 
 import java.io.{File, FileInputStream, FileOutputStream, PrintStream}
 
