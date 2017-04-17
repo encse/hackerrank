@@ -38,7 +38,7 @@ object Solution {
     val n = sc.nextInt()
     val q = sc.nextInt()
     val communities = Array.fill[Community](n+1)(new Community)
-    
+
     sc.nextLine()
     for (i <- 1 to q) {
       var line = sc.nextLine().split(" ")
